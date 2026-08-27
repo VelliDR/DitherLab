@@ -1,0 +1,15 @@
+// DualPassComposite.agsl
+uniform shader backgroundLayer;
+uniform shader overlayLayer;
+uniform int blendMode; // 0 = Normal, 1 = Multiply, 2 = Screen, 3 = Overlay vb.
+uniform float opacity;
+
+half4 main(float2 fragCoord) {
+    half4 bg = backgroundLayer.eval(fragCoord);
+    half4 fg = overlayLayer.eval(fragCoord);
+    
+    // Basit alpha harmanlaması (Normal mode)
+    half4 result = mix(bg, fg, fg.a * opacity);
+    
+    return result;
+}

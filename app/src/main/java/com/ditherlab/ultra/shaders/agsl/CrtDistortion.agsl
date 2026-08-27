@@ -1,0 +1,37 @@
+uniform shader image;
+uniform float amount; // CRT distortion amount
+uniform float2 resolution;
+
+// Curvature and vignette parameters
+const float warp = 0.75; 
+
+half4 main(float2 fragCoord) {
+    vec2 uv = fragCoord / resolution;
+    
+    // Center UVs (-1.0 to 1.0)
+    vec2 pos = uv * 2.0 - 1.0;
+    
+    // Barrel distortion
+    float r = dot(pos, pos);
+    // Apply distortion based on amount (e.g. 0.0 to 1.0)
+    vec2 distortedPos = pos * (1.0 + pos.y * pos.y * warp * amount) * (1.0 + pos.x * pos.x * warp * amount);
+    
+    // Back to 0-1 UVs
+    vec2 distortedUv = distortedPos * 0.5 + 0.5;
+    
+    if (distortedUv.x < 0.0 || distortedUv.x > 1.0 || distortedUv.y < 0.0 || distortedUv.y > 1.0) {
+        return half4(0.0, 0.0, 0.0, 1.0); // Siyah dış çerçeve
+    }
+    
+    half4 color = image.eval(distortedUv * resolution);
+    
+    // Vignette
+    float vignette = 1.0 - (r * 0.25 * amount);
+    color.rgb *= vignette;
+    
+    // Basit tarama çizgileri (scanlines)
+    float scanline = sin(distortedUv.y * resolution.y * 3.14159 * 0.5) * 0.1 * amount;
+    color.rgb -= scanline;
+    
+    return color;
+}

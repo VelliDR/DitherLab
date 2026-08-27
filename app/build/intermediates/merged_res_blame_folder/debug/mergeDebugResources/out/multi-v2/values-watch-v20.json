@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.ditherlab.ultra.app-mergeDebugResources-47:/values-watch-v20/values-watch-v20.xml",
+            "map": [
+                {
+                    "source": "/home/vellli/.gradle/caches/8.10/transforms/2302d68ebe0e20b856ce6fdd2a1a6e9a/transformed/appcompat-1.6.1/res/values-watch-v20/values-watch-v20.xml",
+                    "from": {
+                        "startLines": "2,5,8",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,214,385",
+                        "endLines": "4,7,10",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "209,380,553"
+                    }
+                }
+            ]
+        }
+    ]
+}

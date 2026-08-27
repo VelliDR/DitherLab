@@ -1,0 +1,25 @@
+uniform shader image;
+uniform float amount; // Aberration intensity (0.0 to 1.0)
+uniform float2 resolution;
+uniform float2 direction; // e.g. vec2(1.0, 0.0) for horizontal shift
+
+half4 main(float2 fragCoord) {
+    if (amount <= 0.0) {
+        return image.eval(fragCoord);
+    }
+    
+    // Maksimum kaydırma miktarı
+    float maxShift = 10.0 * amount;
+    
+    // Kırmızı ve Mavi kanallar için kaydırma vektörleri
+    vec2 shiftR = fragCoord + (direction * maxShift);
+    vec2 shiftB = fragCoord - (direction * maxShift);
+    
+    // Kanalları ayrı ayrı örnekle
+    half r = image.eval(shiftR).r;
+    half g = image.eval(fragCoord).g;
+    half b = image.eval(shiftB).b;
+    half a = image.eval(fragCoord).a;
+    
+    return half4(r, g, b, a);
+}

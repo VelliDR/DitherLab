@@ -1,0 +1,51 @@
+uniform shader image;
+uniform float2 resolution;
+uniform float time; // Animasyon için
+uniform float glitchAmount; // Yoğunluk
+
+// Basit rastgele sayı üreteci (Noise)
+float rand(float2 co){
+    return fract(sin(dot(co.xy ,float2(12.9898,78.233))) * 43758.5453);
+}
+
+half4 main(float2 fragCoord) {
+    float2 uv = fragCoord / resolution;
+    
+    // 1. Analog Tracking Error (VHS Bant Kayması)
+    // Ekranın yukarısından aşağıya doğru inen bozuk bir yatay bant
+    float trackingPos = fract(time * 0.3); 
+    // Bandın kalınlığı
+    float band = step(abs(uv.y - trackingPos), 0.08 * (glitchAmount + 0.5));
+    // Bantın içindeki karlanma miktarı
+    float noise = rand(float2(uv.y, time)) * band * glitchAmount;
+    
+    // Bandın olduğu yerde pikselleri rastgele yatay kaydır
+    float2 distortedUv = uv + float2(noise * 0.1, 0.0);
+    
+    // 2. Chromatic Aberration (Neon Synthwave Renk Sapması)
+    // Kayma miktarını bant üzerinde daha da artırıyoruz
+    float splitAmount = 0.015 * glitchAmount + (noise * 0.05);
+    
+    float2 uvR = distortedUv + float2(splitAmount, 0.0);
+    float2 uvB = distortedUv - float2(splitAmount, 0.0);
+    // Yeşil kanalı çok hafif dikey kaydır
+    float2 uvG = distortedUv + float2(0.0, splitAmount * 0.2); 
+    
+    half r = image.eval(uvR * resolution).r;
+    half g = image.eval(uvG * resolution).g;
+    half b = image.eval(uvB * resolution).b;
+    half a = image.eval(distortedUv * resolution).a;
+    
+    // 3. Scanlines (CRT Tarama Çizgileri)
+    float scanline = sin(uv.y * 800.0) * 0.04 * glitchAmount;
+    
+    half4 finalColor = half4(r, g, b, a);
+    
+    // Scanline'ları siyahlaştır
+    finalColor.rgb -= half3(scanline);
+    
+    // 4. VHS Beyaz Karlanma (Bant üzerinde beyaz parazitler)
+    finalColor.rgb += half3(noise * 0.4);
+    
+    return finalColor;
+}
