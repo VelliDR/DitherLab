@@ -1,6 +1,6 @@
 # DitherLab
 
-DitherLab, orijinal DitherLab PWA projesinden ilham alınarak geliştirilmiş, güçlü görsel motorları modern ve yüksek performanslı bir Android deneyimiyle birleştiren gelişmiş bir fotoğraf düzenleme uygulamasıdır. 
+DitherLab, güçlü görsel motorları modern ve yüksek performanslı bir Android deneyimiyle birleştiren gelişmiş bir fotoğraf düzenleme uygulamasıdır. 
 
 Tüm görsel işleme süreçleri tamamen **yerel (on-device)** olarak cihazınızda çalışır, böylece internet bağlantısına ihtiyaç duymazsınız ve fotoğraflarınızın gizliliği her zaman korunur. Cihazınızın işlem gücünü maksimum düzeyde kullanarak render işlemlerini saniyeler içinde tamamlar.
 
