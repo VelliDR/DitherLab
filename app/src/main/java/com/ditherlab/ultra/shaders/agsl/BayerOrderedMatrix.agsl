@@ -1,0 +1,53 @@
+uniform shader image;
+uniform float ditherStrength; // 0.0 - 1.0
+uniform float2 resolution;
+
+// 4x4 Bayer Dither Matrix değerlerini temsil eden manuel mantık
+half4 main(float2 fragCoord) {
+    half4 color = image.eval(fragCoord);
+    
+    int x = int(mod(fragCoord.x, 4.0));
+    int y = int(mod(fragCoord.y, 4.0));
+    
+    // 4x4 Bayer Matrix (0-15 aralığında, 1/16 ile normalize edilir)
+    //  0  8  2 10
+    // 12  4 14  6
+    //  3 11  1  9
+    // 15  7 13  5
+    float bayerValue = 0.0;
+    if (y == 0) {
+        if (x == 0) bayerValue = 0.0;
+        else if (x == 1) bayerValue = 8.0;
+        else if (x == 2) bayerValue = 2.0;
+        else if (x == 3) bayerValue = 10.0;
+    } else if (y == 1) {
+        if (x == 0) bayerValue = 12.0;
+        else if (x == 1) bayerValue = 4.0;
+        else if (x == 2) bayerValue = 14.0;
+        else if (x == 3) bayerValue = 6.0;
+    } else if (y == 2) {
+        if (x == 0) bayerValue = 3.0;
+        else if (x == 1) bayerValue = 11.0;
+        else if (x == 2) bayerValue = 1.0;
+        else if (x == 3) bayerValue = 9.0;
+    } else if (y == 3) {
+        if (x == 0) bayerValue = 15.0;
+        else if (x == 1) bayerValue = 7.0;
+        else if (x == 2) bayerValue = 13.0;
+        else if (x == 3) bayerValue = 5.0;
+    }
+    
+    // Normalize bayer value (0.0 to 1.0) and shift to -0.5 to 0.5
+    float threshold = (bayerValue / 16.0) - 0.5;
+    
+    // Yalnızca luminance üzerinden örnek:
+    float luminance = dot(color.rgb, half3(0.2126, 0.7152, 0.0722));
+    
+    // Eşik değerini uygula ve dither gücü ile ölçekle
+    float ditheredLuma = luminance + (threshold * ditherStrength);
+    
+    // Posterize (1-bit siyah/beyaz dither)
+    half finalVal = ditheredLuma > 0.5 ? 1.0 : 0.0;
+    
+    return half4(finalVal, finalVal, finalVal, color.a);
+}
