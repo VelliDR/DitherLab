@@ -1,46 +1,65 @@
-# DitherLab
+# 🎨 DitherLab Ultra
 
-DitherLab, güçlü görsel motorları modern ve yüksek performanslı bir Android deneyimiyle birleştiren gelişmiş bir fotoğraf düzenleme uygulamasıdır. 
+![DitherLab Ultra](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android)
+![Kotlin](https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin)
+![ML Kit](https://img.shields.io/badge/AI-Google_ML_Kit-4285F4?style=for-the-badge&logo=google)
+![License](https://img.shields.io/badge/License-GPL_3.0-blue?style=for-the-badge)
 
-Tüm görsel işleme süreçleri tamamen **yerel (on-device)** olarak cihazınızda çalışır, böylece internet bağlantısına ihtiyaç duymazsınız ve fotoğraflarınızın gizliliği her zaman korunur. Cihazınızın işlem gücünü maksimum düzeyde kullanarak render işlemlerini saniyeler içinde tamamlar.
+**DitherLab Ultra**, orijinal DitherLab PWA projesinden ilham alınarak geliştirilmiş; nostaljik, retro ve siberpunk görsel estetiğini modern Android cihazların gücüyle buluşturan **yüksek performanslı bir fotoğraf ve VİDEO düzenleme** uygulamasıdır.
 
-## Özellikler
+Tüm sihir tamamen **cihazınızda (on-device offline)** gerçekleşir. İnternete veya buluta ihtiyaç duymadan, çok çekirdekli asenkron (multi-core concurrency) mimarisiyle saniyeler içinde büyüleyici sonuçlar alırsınız! 🚀
 
-- **Tamamen Yerel İşleme:** Hiçbir görsel buluta yüklenmez. Gizlilik odaklı tasarım.
-- **Yapay Zeka Destekli Özne Ayrımı (Subject Segmentation):** ML Kit entegrasyonu sayesinde fotoğraftaki özneyi (insan, nesne) otomatik tanır; efektleri dilerseniz sadece arka plana, dilerseniz sadece özneye veya tüm fotoğrafa uygulayabilirsiniz.
-- **Donanım ve Yazılım Hızlandırmalı Render:** Cihaz uyumluluğunu maksimize eden esnek altyapı (Hardware & Software Canvas Fallbacks).
+---
 
-## Görsel Motorlar (Engines)
+## ✨ Öne Çıkan Özellikler
 
-DitherLab, her biri kendine has bir görsel estetiğe sahip çok sayıda özel render motoru içerir:
+- 🎞️ **YENİ! Video İşleme Desteği:** Artık sadece fotoğraflara değil, videolara da efekt uygulayabilirsiniz! Asenkron kare işleme (Coroutine concurrency) ve FFmpeg entegrasyonu sayesinde videolarınız ses kayması yaşamadan ve donanımı yormadan hızla render edilir.
+- 🧠 **Yapay Zeka Destekli Özne Ayrımı (Subject Segmentation):** Google ML Kit kullanılarak fotoğraftaki/videodaki insan veya nesneler saniyeler içinde algılanır. Efektleri ister sadece özneye, ister arka plana uygulayın!
+- 🔒 **Gizlilik Odaklı & Çevrimdışı:** Görüntüleriniz hiçbir bulut sunucusuna gitmez, %100 lokal olarak cihazınızda işlenir.
+- ⚡ **Yüksek Performans:** Özel Kotlin `VideoProcessor` ve Dispatcher mimarisi ile CPU'yu verimli kullanarak ısınmayı engeller ve işlem süresini minimize eder.
 
-1. **Glitch Engine (Spider-Verse Estetiği):** RGB/CMYK kanallarını ayırır, VHS tarzı yatay bozulmalar ve BenDay (halftone) noktalarıyla animasyon filmlerini aratmayan dinamik sahneler yaratır.
-2. **Van Gogh Engine (Yağlı Boya):** Vektörel akış alanları (flow fields) kullanarak fotoğrafları tıpkı Van Gogh'un fırça darbeleriyle çizilmiş gibi empresyonist tablolara dönüştürür.
-3. **SensorCorrupt Engine:** Cihazın jiroskop (hareket) sensörlerini dinleyerek, telefonu hareket ettirdiğinizde fotoğrafta anlık "data mosh" (veri bozulması) ve sinyal kaybı efektleri oluşturur.
-4. **CrtTv Engine:** Eski tüplü televizyonların ekran yapısını, RGB fosfor hücrelerini ve tarama çizgilerini (scanlines) simüle eder.
-5. **PixelArt & Minecraft Engines:** Yüksek çözünürlüklü fotoğrafları 8-bit veya blok tabanlı nostaljik sanat eserlerine dönüştürür.
-6. **FlirThermal & ThermalPaper Engines:** Isı kamerası veya eski tip termal fiş yazıcı estetiği.
-7. **BayerDither & HalftoneMatrix Engines:** Klasik gazete baskısı ve retro bilgisayar dither'lama teknikleri.
-8. **ColorClash, Postcard & PunkFanzine Engines:** Zıt renkleri çarpıştıran, retro kartpostal dokusu veren veya isyankar fanzin dergisi tarzı oluşturan estetik filtreler.
-9. **AsciiMatrix & TextGlitch Engines:** Fotoğrafı harflerden (ASCII) oluşan matrislere veya bozuk metin dizilimlerine çevirir.
+---
 
-## Kurulum ve Derleme
+## 🚀 Görsel Motorlar (Engines)
 
-Bu projeyi derlemek için:
-1. Depoyu bilgisayarınıza klonlayın.
-2. Android Studio ile açın (Güncel bir JDK ve Android SDK yüklü olmalıdır).
-3. Gradle senkronizasyonunu tamamlayın.
-4. Cihazınızda veya emülatörde çalıştırın.
+DitherLab, her biri ayrı bir sanat akımını ve retro dönemi yansıtan çok sayıda motora sahiptir:
 
-Çıktı APK dosyası, derleme sonrasında `DitherLab.apk` olarak oluşacaktır.
+* 🌌 **Glitch Engine:** Spider-Verse estetiği! RGB/CMYK kanallarını ayırır, VHS bozulmaları ekler.
+* 🎨 **Van Gogh Engine:** Vektörel akış (flow fields) ile kareleri empresyonist tablolara çevirir.
+* 📺 **CrtTv Engine:** Eski tüplü televizyonların tarama çizgilerini (scanlines) ve fosfor piksellerini simüle eder.
+* 🕹️ **PixelArt & Minecraft:** Görselleri nostaljik 8-bit veya blok tabanlı yapılara dönüştürür.
+* 🌡️ **FlirThermal & ThermalPaper:** Termal kamera görüntüsü ve eski yazarkasa fişi estetiği.
+* 📰 **BayerDither & HalftoneMatrix:** Klasik gazete baskısı dokuları.
+* 💥 **ColorClash, Postcard & PunkFanzine:** Renk zıtlıkları, eski kartpostal ve isyankar fanzin dergisi tarzı efektler.
+* 📟 **AsciiMatrix & TextGlitch:** Görüntüleri The Matrix tarzı düşen yazılara dönüştürür.
+* 📳 **SensorCorrupt:** Cihaz sensörlerini kullanarak hareket ettikçe veri moshinq (data mosh) oluşturur.
 
-## Teknoloji Yığını
+---
 
-- **Android SDK (Kotlin)**
-- **Jetpack Compose** (Modern ve deklaratif UI)
-- **Google ML Kit** (Özne/Arka plan ayrımı)
-- **RenderScript & Canvas API** (İleri düzey pikseller arası işlemler ve donanım ivmelendirme)
+## 🛠 Kurulum ve Derleme
 
-## Lisans
+Projeyi derleyip kendi cihazınızda denemek çok kolay:
 
-Bu proje **GNU General Public License v3.0 (GPL-3.0)** altında lisanslanmıştır. Daha fazla bilgi için kök dizindeki `LICENSE` dosyasına göz atabilirsiniz.
+1. Depoyu klonlayın:
+   ```bash
+   git clone https://github.com/VelliDR/DitherLab.git
+   ```
+2. **Android Studio** ile açın.
+3. Gradle senkronizasyonunu bekleyin.
+4. Cihazınızda çalıştırın veya `./gradlew assembleDebug` ile `DitherLab.apk` oluşturun.
+
+---
+
+## 💻 Teknoloji Yığını
+
+- **Dil:** Kotlin
+- **UI:** Jetpack Compose (Modern, deklaratif tasarım)
+- **AI/ML:** Google ML Kit (Yüksek performanslı özne segmentasyonu)
+- **Video Processing:** FFmpeg & Kotlin Coroutines (`async/awaitAll` ile çok çekirdekli kare işleme)
+- **Graphics:** Android Canvas API & ColorMatrix işlemleri
+
+---
+
+## 📄 Lisans
+
+DitherLab Ultra, açık kaynak ruhuna uygun olarak **GNU General Public License v3.0 (GPL-3.0)** lisansı altında dağıtılmaktadır. Daha detaylı bilgi için `LICENSE` dosyasına göz atabilirsiniz.
