@@ -1,11 +1,11 @@
-# 🎨 DitherLab Ultra
+# 🎨 DitherLab 
 
 ![DitherLab Ultra](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android)
 ![Kotlin](https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin)
 ![ML Kit](https://img.shields.io/badge/AI-Google_ML_Kit-4285F4?style=for-the-badge&logo=google)
 ![License](https://img.shields.io/badge/License-GPL_3.0-blue?style=for-the-badge)
 
-**DitherLab Ultra**, orijinal Retro-Anomalies-PWA projesinden ilham alınarak geliştirilmiş; nostaljik, retro ve siberpunk görsel estetiğini modern Android cihazların gücüyle buluşturan **yüksek performanslı bir fotoğraf ve VİDEO düzenleme** uygulamasıdır.
+**DitherLab**, orijinal Retro-Anomalies-PWA projesinden ilham alınarak geliştirilmiş; nostaljik, retro ve siberpunk görsel estetiğini modern Android cihazların gücüyle buluşturan **yüksek performanslı bir fotoğraf ve VİDEO düzenleme** uygulamasıdır.
 
 Tüm sihir tamamen **cihazınızda (on-device offline)** gerçekleşir. İnternete veya buluta ihtiyaç duymadan, çok çekirdekli asenkron (multi-core concurrency) mimarisiyle saniyeler içinde büyüleyici sonuçlar alırsınız! 🚀
 
@@ -62,4 +62,4 @@ Projeyi derleyip kendi cihazınızda denemek çok kolay:
 
 ## 📄 Lisans
 
-DitherLab Ultra, açık kaynak ruhuna uygun olarak **GNU General Public License v3.0 (GPL-3.0)** lisansı altında dağıtılmaktadır. Daha detaylı bilgi için `LICENSE` dosyasına göz atabilirsiniz.
+DitherLab, açık kaynak ruhuna uygun olarak **GNU General Public License v3.0 (GPL-3.0)** lisansı altında dağıtılmaktadır. Daha detaylı bilgi için `LICENSE` dosyasına göz atabilirsiniz.
