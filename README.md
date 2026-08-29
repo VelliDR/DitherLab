@@ -5,7 +5,7 @@
 ![ML Kit](https://img.shields.io/badge/AI-Google_ML_Kit-4285F4?style=for-the-badge&logo=google)
 ![License](https://img.shields.io/badge/License-GPL_3.0-blue?style=for-the-badge)
 
-**DitherLab Ultra**, orijinal DitherLab PWA projesinden ilham alınarak geliştirilmiş; nostaljik, retro ve siberpunk görsel estetiğini modern Android cihazların gücüyle buluşturan **yüksek performanslı bir fotoğraf ve VİDEO düzenleme** uygulamasıdır.
+**DitherLab Ultra**, orijinal Retro-Anomalies-PWA projesinden ilham alınarak geliştirilmiş; nostaljik, retro ve siberpunk görsel estetiğini modern Android cihazların gücüyle buluşturan **yüksek performanslı bir fotoğraf ve VİDEO düzenleme** uygulamasıdır.
 
 Tüm sihir tamamen **cihazınızda (on-device offline)** gerçekleşir. İnternete veya buluta ihtiyaç duymadan, çok çekirdekli asenkron (multi-core concurrency) mimarisiyle saniyeler içinde büyüleyici sonuçlar alırsınız! 🚀
 
