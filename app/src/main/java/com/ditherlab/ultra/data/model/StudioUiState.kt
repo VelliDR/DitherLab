@@ -13,8 +13,12 @@ sealed interface StudioUiState {
         val isA_BSplitActive: Boolean = false,
         val splitPosition: Float = 0.5f, // 0.0 to 1.0
         val isExporting: Boolean = false,
-        val selectedEngineIndex: Int = 0,
+        val backgroundEngineIndex: Int = 0,
+        val foregroundEngineIndex: Int = 0,
         val subjectMaskBitmap: Bitmap? = null,
+        val maskShape: String = "none",
+        val customMaskBitmap: Bitmap? = null,
+        val sliderIsDragging: Boolean = false,
         val originalVideoUri: android.net.Uri? = null,
         val isProcessingVideo: Boolean = false,
         val videoProgress: Float = 0f

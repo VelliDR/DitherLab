@@ -27,6 +27,9 @@ import com.ditherlab.ultra.engine.pwa.ColorClashEngineKotlin
 import com.ditherlab.ultra.engine.pwa.TextGlitchEngineKotlin
 import com.ditherlab.ultra.engine.pwa.SensorCorruptEngineKotlin
 import com.ditherlab.ultra.engine.pwa.VanGoghBetaEngineKotlin
+import com.ditherlab.ultra.engine.karanlik.ChromaticAberrationEngineKotlin
+import com.ditherlab.ultra.engine.karanlik.SwirlyBokehEngineKotlin
+import com.ditherlab.ultra.engine.karanlik.DarkroomEngineKotlin
 import com.ditherlab.ultra.engine.base.VisualEngine
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmentation
@@ -59,7 +62,10 @@ class StudioViewModel : ViewModel() {
         PunkFanzineEngineKotlin(),
         ColorClashEngineKotlin(),
         TextGlitchEngineKotlin(),
-        SensorCorruptEngineKotlin()
+        SensorCorruptEngineKotlin(),
+        ChromaticAberrationEngineKotlin(),
+        SwirlyBokehEngineKotlin(),
+        DarkroomEngineKotlin()
     )
     
     private val _uiState = MutableStateFlow<StudioUiState>(StudioUiState.Loading)
@@ -181,9 +187,44 @@ class StudioViewModel : ViewModel() {
     }
 
     fun setEngine(index: Int) {
+        setBackgroundEngine(index)
+    }
+    
+    fun setBackgroundEngine(index: Int) {
         val currentState = _uiState.value as? StudioUiState.Active ?: return
-        _uiState.update { currentState.copy(selectedEngineIndex = index) }
+        _uiState.update { currentState.copy(backgroundEngineIndex = index) }
         applyEffects()
+    }
+    
+    fun setForegroundEngine(index: Int) {
+        val currentState = _uiState.value as? StudioUiState.Active ?: return
+        _uiState.update { currentState.copy(foregroundEngineIndex = index) }
+        applyEffects()
+    }
+
+    fun setMaskShape(shape: String) {
+        val currentState = _uiState.value as? StudioUiState.Active ?: return
+        if (currentState.maskShape == shape) return
+        
+        viewModelScope.launch {
+            val original = currentState.originalImage ?: return@launch
+            val customMask = if (shape != "none") {
+                com.ditherlab.ultra.engine.pipeline.MaskManager.createShapeMask(shape, original.width, original.height)
+            } else null
+            
+            _uiState.update { (it as? StudioUiState.Active)?.copy(
+                maskShape = shape,
+                customMaskBitmap = customMask
+            ) ?: it }
+            applyEffects()
+        }
+    }
+    
+    fun setSliderDragging(isDragging: Boolean) {
+        val currentState = _uiState.value as? StudioUiState.Active ?: return
+        if (currentState.sliderIsDragging != isDragging) {
+            _uiState.update { currentState.copy(sliderIsDragging = isDragging) }
+        }
     }
     
     fun setSplitViewPosition(position: Float) {
@@ -260,7 +301,8 @@ class StudioViewModel : ViewModel() {
         
         renderJob?.cancel()
         renderJob = viewModelScope.launch {
-            val engine = availableEngines.getOrNull(currentState.selectedEngineIndex) ?: availableEngines.first()
+            val bgEngine = availableEngines.getOrNull(currentState.backgroundEngineIndex) ?: availableEngines.first()
+            val fgEngine = availableEngines.getOrNull(currentState.foregroundEngineIndex) ?: bgEngine
             
             // Path B: Canlı Önizleme (Live Preview) için Downscale
             val previewBitmap = withContext(Dispatchers.Default) {
@@ -279,10 +321,12 @@ class StudioViewModel : ViewModel() {
             val configWithPalette = currentState.currentConfig.copy(resolvedPalette = selectedPalette)
             
             val finalResult = com.ditherlab.ultra.engine.pipeline.VisualPipeline.processImage(
-                previewBitmap,
-                configWithPalette,
-                engine,
-                currentState.subjectMaskBitmap
+                original = previewBitmap,
+                config = configWithPalette,
+                backgroundEngine = bgEngine,
+                foregroundEngine = fgEngine,
+                subjectMaskBitmap = currentState.subjectMaskBitmap,
+                customMaskBitmap = currentState.customMaskBitmap
             )
             
             _uiState.update { 
@@ -298,16 +342,19 @@ class StudioViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { currentState.copy(isExporting = true) }
             try {
-                val engine = availableEngines.getOrNull(currentState.selectedEngineIndex) ?: availableEngines.first()
+                val bgEngine = availableEngines.getOrNull(currentState.backgroundEngineIndex) ?: availableEngines.first()
+                val fgEngine = availableEngines.getOrNull(currentState.foregroundEngineIndex) ?: bgEngine
                 
                 val selectedPalette = currentState.availablePalettes.find { it.id == currentState.currentConfig.selectedPaletteId } ?: currentState.availablePalettes.first()
                 val configWithPalette = currentState.currentConfig.copy(resolvedPalette = selectedPalette)
                 
                 val finalResult = com.ditherlab.ultra.engine.pipeline.VisualPipeline.processImage(
-                    original,
-                    configWithPalette,
-                    engine,
-                    currentState.subjectMaskBitmap
+                    original = original,
+                    config = configWithPalette,
+                    backgroundEngine = bgEngine,
+                    foregroundEngine = fgEngine,
+                    subjectMaskBitmap = currentState.subjectMaskBitmap,
+                    customMaskBitmap = currentState.customMaskBitmap
                 )
                 
                 withContext(Dispatchers.IO) {
@@ -376,7 +423,9 @@ class StudioViewModel : ViewModel() {
             val segmenter = SubjectSegmentation.getClient(options)
             
             try {
-                val engine = availableEngines.getOrNull(currentState.selectedEngineIndex) ?: availableEngines.first()
+                val bgEngine = availableEngines.getOrNull(currentState.backgroundEngineIndex) ?: availableEngines.first()
+                val fgEngine = availableEngines.getOrNull(currentState.foregroundEngineIndex) ?: bgEngine
+                
                 val selectedPalette = currentState.availablePalettes.find { it.id == currentState.currentConfig.selectedPaletteId } ?: currentState.availablePalettes.first()
                 val configWithPalette = currentState.currentConfig.copy(resolvedPalette = selectedPalette)
                 val targetLayer = currentState.currentConfig.targetLayer
@@ -404,8 +453,10 @@ class StudioViewModel : ViewModel() {
                         com.ditherlab.ultra.engine.pipeline.VisualPipeline.processImage(
                             original = bitmap,
                             config = configWithPalette,
-                            engine = engine,
-                            subjectMaskBitmap = mask
+                            backgroundEngine = bgEngine,
+                            foregroundEngine = fgEngine,
+                            subjectMaskBitmap = mask,
+                            customMaskBitmap = currentState.customMaskBitmap
                         )
                     }
                 )
