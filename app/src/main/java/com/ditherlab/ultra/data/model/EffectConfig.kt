@@ -81,6 +81,13 @@ data class EffectConfig(
     val sensorLineJitter: Boolean = true,
     val sensorBitShift: Boolean = true,
     
+    // NoirComic Engine
+    val noirDotSize: Float = 6f,
+    val noirContrast: Float = 2.0f,
+    val noirTextureDensity: Float = 0.3f,
+    val noirColorMode: Int = 0, // 0: Noir B&W, 1: Spider-Red Pop, 2: Full Color
+    val noirDotColor: String = "black", // "black", "red", "navy"
+    
     val postcardStampMargin: Float = 24f,
     val postcardIntensity: Float = 0.5f,
     
@@ -89,7 +96,8 @@ data class EffectConfig(
     val afterimageAngle: Float = 0.0f, // Radyan cinsinden (0-2PI)
     val afterimageSpread: Float = 20.0f, // Dağılma / Trail uzunluğu
     val lightIntensity: Float = 1.0f, // Işık Parlaklığı (0.0 - 2.0)
-    val targetLayer: TargetLayer = TargetLayer.ALL, // Hangi katmanın etkileneceği
+    val targetLayer: TargetLayer = TargetLayer.ALL, // Hangi katmanın etkileneceği (Motorlar için)
+    val shapeTargetLayer: TargetLayer = TargetLayer.ALL, // Hangi katmanın maskeleneceği (Şekiller için)
     val resolvedPalette: ColorPalette? = null, // ViewModel'den motora aktarılan aktif palet
     
     // Fırça Maskesi Ayarları
@@ -98,7 +106,12 @@ data class EffectConfig(
     val brushPaths: List<BrushPath> = emptyList(),
     
     // Dynamic Fine-Tuning Parameters (used by UI sliders to override engine defaults)
-    val customParams: Map<String, Float> = emptyMap()
+    val customParams: Map<String, Float> = emptyMap(),
+    
+    // Video Timeline / Effect Range Parameters
+    val effectStartTimeMs: Long = 0L,
+    val effectEndTimeMs: Long = -1L,
+    val trimVideoToEffect: Boolean = false
 )
 
 data class BrushPath(

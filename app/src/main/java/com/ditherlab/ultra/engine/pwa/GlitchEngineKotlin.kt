@@ -14,6 +14,7 @@ class GlitchEngineKotlin : VisualEngine {
 
     private var benDayBitmap: Bitmap? = null
 
+    @Synchronized
     private fun getBenDayPattern(scale: Float): BitmapShader {
         val size = max(4, (5 * scale).toInt())
         val bm = benDayBitmap
@@ -23,6 +24,7 @@ class GlitchEngineKotlin : VisualEngine {
             // Draw ONLY the black dots, leave background transparent
             val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#111116") }
             c.drawCircle(size / 2f, size / 2f, size / 4.2f, p)
+            benDayBitmap?.recycle()
             benDayBitmap = newBm
         }
         return BitmapShader(benDayBitmap!!, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
@@ -56,8 +58,7 @@ class GlitchEngineKotlin : VisualEngine {
         val w = input.width
         val h = input.height
         val scale = max(w, h) / 1200f
-        val intensity = (config.glitchIntensity * 100f).coerceIn(0f, 100f)
-        val normIntensity = (intensity / 100f).coerceIn(0.05f, 1.0f)
+        val normIntensity = (config.glitchIntensity / 100f).coerceIn(0.05f, 1.0f)
 
         val output = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val ctx = Canvas(output)

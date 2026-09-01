@@ -54,8 +54,8 @@ class DarkroomEngineKotlin : VisualEngine {
             Preset("cinestill", createMatrix(1.15f, 1.08f, 0.95f), 0xff003366.toInt(), 0.10f, PorterDuff.Mode.MULTIPLY)
         )
         
-        val index = (config.darkroomIntensity.toInt() / 20).coerceIn(0, presets.size - 1)
-        val preset = presets[index]
+        val presetKey = config.darkroomPreset.ifEmpty { "sb" }
+        val preset = presets.find { it.name == presetKey } ?: presets[0]
 
         val paint = Paint().apply {
             colorFilter = ColorMatrixColorFilter(preset.colorMatrix)

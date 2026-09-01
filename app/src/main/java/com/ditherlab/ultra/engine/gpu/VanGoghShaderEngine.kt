@@ -102,4 +102,12 @@ class VanGoghShaderEngine : GpuShaderEngine {
         shader.setIntUniform("mode", config.vangoghMode)
         return shader
     }
+    
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    override fun updateShaderUniforms(shader: RuntimeShader, config: EffectConfig) {
+        shader.setFloatUniform("stepSize", config.vangoghStepSize)
+        shader.setFloatUniform("brushLength", config.vangoghMaxLength)
+        shader.setIntUniform("impasto", if (config.vangoghImpasto) 1 else 0)
+        shader.setIntUniform("mode", config.vangoghMode)
+    }
 }

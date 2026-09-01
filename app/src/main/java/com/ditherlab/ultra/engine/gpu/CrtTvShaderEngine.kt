@@ -66,4 +66,10 @@ class CrtTvShaderEngine : GpuShaderEngine {
         shader.setIntUniform("phosphorGlow", if (config.crtPhosphorGlow) 1 else 0)
         return shader
     }
+    
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    override fun updateShaderUniforms(shader: RuntimeShader, config: EffectConfig) {
+        shader.setFloatUniform("scanlineGap", config.crtScanlineGap)
+        shader.setIntUniform("phosphorGlow", if (config.crtPhosphorGlow) 1 else 0)
+    }
 }

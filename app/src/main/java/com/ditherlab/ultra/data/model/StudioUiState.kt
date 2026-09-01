@@ -21,7 +21,9 @@ sealed interface StudioUiState {
         val sliderIsDragging: Boolean = false,
         val originalVideoUri: android.net.Uri? = null,
         val isProcessingVideo: Boolean = false,
-        val videoProgress: Float = 0f
+        val videoProgress: Float = 0f,
+        val videoDurationMs: Long = 0L,
+        val videoThumbnails: List<Bitmap> = emptyList()
     ) : StudioUiState
     
     data class Error(val message: String) : StudioUiState

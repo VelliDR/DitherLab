@@ -27,6 +27,7 @@ import com.ditherlab.ultra.engine.pwa.ColorClashEngineKotlin
 import com.ditherlab.ultra.engine.pwa.TextGlitchEngineKotlin
 import com.ditherlab.ultra.engine.pwa.SensorCorruptEngineKotlin
 import com.ditherlab.ultra.engine.pwa.VanGoghBetaEngineKotlin
+import com.ditherlab.ultra.engine.pwa.NoirComicEngineKotlin
 import com.ditherlab.ultra.engine.karanlik.ChromaticAberrationEngineKotlin
 import com.ditherlab.ultra.engine.karanlik.SwirlyBokehEngineKotlin
 import com.ditherlab.ultra.engine.karanlik.DarkroomEngineKotlin
@@ -48,6 +49,7 @@ class StudioViewModel : ViewModel() {
     private val paletteRepository = PaletteRepository()
     
     val availableEngines: List<VisualEngine> = listOf(
+        com.ditherlab.ultra.engine.pwa.OrijinalEngineKotlin(),
         PixelArtEngineKotlin(),
         GlitchEngineKotlin(),
         VanGoghEngineKotlin(),
@@ -65,7 +67,11 @@ class StudioViewModel : ViewModel() {
         SensorCorruptEngineKotlin(),
         ChromaticAberrationEngineKotlin(),
         SwirlyBokehEngineKotlin(),
-        DarkroomEngineKotlin()
+        NoirComicEngineKotlin(),
+        DarkroomEngineKotlin(),
+        com.ditherlab.ultra.engine.gpu.GlitchShaderEngine(),
+        com.ditherlab.ultra.engine.gpu.VanGoghShaderEngine(),
+        com.ditherlab.ultra.engine.gpu.CrtTvShaderEngine()
     )
     
     private val _uiState = MutableStateFlow<StudioUiState>(StudioUiState.Loading)
@@ -88,28 +94,52 @@ class StudioViewModel : ViewModel() {
     fun setOriginalVideo(context: android.content.Context, uri: android.net.Uri) {
         val currentState = _uiState.value as? StudioUiState.Active ?: return
         
-        var previewBitmap: Bitmap? = null
-        try {
-            val retriever = android.media.MediaMetadataRetriever()
-            retriever.setDataSource(context, uri)
-            previewBitmap = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-            retriever.release()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        
-        _uiState.update { 
-            currentState.copy(
-                originalVideoUri = uri, 
-                originalImage = previewBitmap, 
-                subjectMaskBitmap = null
-            ) 
-        }
-        
-        if (previewBitmap != null) {
-            applyEffects() // İlk hızlı render
-            // Arka planda ML Kit ile Özneyi Maskele
-            extractSubjectMask(previewBitmap)
+        viewModelScope.launch(Dispatchers.IO) {
+            var previewBitmap: Bitmap? = null
+            var durationMs = 0L
+            val thumbnails = mutableListOf<Bitmap>()
+            
+            try {
+                val retriever = android.media.MediaMetadataRetriever()
+                retriever.setDataSource(context, uri)
+                
+                val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                durationMs = durationStr?.toLongOrNull() ?: 0L
+                
+                previewBitmap = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                
+                // Extract 7 evenly spaced thumbnails
+                if (durationMs > 0) {
+                    val thumbCount = 7
+                    for (i in 0 until thumbCount) {
+                        val timeUs = (i * durationMs * 1000) / Math.max(1, thumbCount - 1)
+                        val bmp = retriever.getFrameAtTime(timeUs, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                        if (bmp != null) thumbnails.add(bmp)
+                    }
+                }
+                
+                retriever.release()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            
+            withContext(Dispatchers.Main) {
+                _uiState.update { state ->
+                    (state as? StudioUiState.Active)?.copy(
+                        originalVideoUri = uri, 
+                        originalImage = previewBitmap, 
+                        subjectMaskBitmap = null,
+                        videoDurationMs = durationMs,
+                        videoThumbnails = thumbnails
+                    ) ?: state
+                }
+                
+                if (previewBitmap != null) {
+                    applyEffects() // İlk hızlı render
+                    // Arka planda ML Kit ile Özneyi Maskele
+                    extractSubjectMask(previewBitmap)
+                }
+            }
         }
     }
 
@@ -151,6 +181,9 @@ class StudioViewModel : ViewModel() {
                 e.printStackTrace()
                 // Hata durumunda maske boş kalır, TargetLayer.ALL olarak devam eder
             }
+            .addOnCompleteListener {
+                segmenter.close()
+            }
     }
     
     suspend fun extractSubjectMaskSync(bitmap: Bitmap): Bitmap? = kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
@@ -167,6 +200,9 @@ class StudioViewModel : ViewModel() {
             .addOnFailureListener { e ->
                 e.printStackTrace()
                 continuation.resume(null) { }
+            }
+            .addOnCompleteListener {
+                segmenter.close()
             }
     }
 
@@ -329,8 +365,13 @@ class StudioViewModel : ViewModel() {
                 customMaskBitmap = currentState.customMaskBitmap
             )
             
-            _uiState.update { 
-                (it as StudioUiState.Active).copy(processedImage = finalResult) 
+            if (previewBitmap != original && !previewBitmap.isRecycled) {
+                // Let GC clean preview downscaled bitmap safely when unreferenced
+            }
+            
+            _uiState.update { state ->
+                val activeState = state as? StudioUiState.Active ?: return@update state
+                activeState.copy(processedImage = finalResult) 
             }
         }
     }
@@ -383,8 +424,11 @@ class StudioViewModel : ViewModel() {
         }
     }
     
-    suspend fun extractSubjectMaskWithSegmenterSync(segmenter: com.google.mlkit.vision.segmentation.subject.SubjectSegmenter, bitmap: Bitmap): Bitmap? = kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
-        val maxDim = 800f
+    suspend fun extractSubjectMaskWithSegmenterSync(
+        segmenter: com.google.mlkit.vision.segmentation.subject.SubjectSegmenter,
+        bitmap: Bitmap,
+        maxDim: Float = 360f
+    ): Bitmap? = kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
         val scale = if (bitmap.width > bitmap.height) maxDim / bitmap.width else maxDim / bitmap.height
         val scaledBitmap = if (scale < 1f) {
             Bitmap.createScaledBitmap(bitmap, (bitmap.width * scale).toInt(), (bitmap.height * scale).toInt(), true)
@@ -441,16 +485,20 @@ class StudioViewModel : ViewModel() {
                 val success = videoProcessor.processVideo(
                     inputVideoPath = inputPath,
                     outputVideoPath = outputPath,
+                    startTimeMs = currentState.currentConfig.effectStartTimeMs,
+                    endTimeMs = currentState.currentConfig.effectEndTimeMs,
+                    trimVideo = currentState.currentConfig.trimVideoToEffect,
                     maxDurationSeconds = 30,
+                    maxConcurrency = if (targetLayer != TargetLayer.ALL || currentState.currentConfig.shapeTargetLayer != TargetLayer.ALL || bgEngine.engineName != fgEngine.engineName) 1 else 4,
                     onProgress = { progress ->
                         _uiState.update { (it as? StudioUiState.Active)?.copy(videoProgress = progress) ?: it }
                     },
                     frameProcessor = { bitmap ->
-                        val mask = if (targetLayer != TargetLayer.ALL) {
+                        val mask = if (targetLayer != TargetLayer.ALL || currentState.currentConfig.shapeTargetLayer != TargetLayer.ALL || bgEngine.engineName != fgEngine.engineName) {
                             extractSubjectMaskWithSegmenterSync(segmenter, bitmap)
                         } else null
                         
-                        com.ditherlab.ultra.engine.pipeline.VisualPipeline.processImage(
+                        val composited = com.ditherlab.ultra.engine.pipeline.VisualPipeline.processImage(
                             original = bitmap,
                             config = configWithPalette,
                             backgroundEngine = bgEngine,
@@ -458,6 +506,8 @@ class StudioViewModel : ViewModel() {
                             subjectMaskBitmap = mask,
                             customMaskBitmap = currentState.customMaskBitmap
                         )
+                        mask?.recycle()
+                        composited
                     }
                 )
                 

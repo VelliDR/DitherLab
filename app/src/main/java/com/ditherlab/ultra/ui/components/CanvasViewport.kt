@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import com.ditherlab.ultra.data.model.PointF
 import com.ditherlab.ultra.data.model.StudioUiState
-import com.ditherlab.ultra.ui.theme.AccentOlive
+import com.ditherlab.ultra.ui.theme.*
 
 @Composable
 fun CanvasViewport(
@@ -77,8 +77,8 @@ fun CanvasViewport(
                 }
             }
     ) {
-        val original = uiState.originalImage?.asImageBitmap()
-        val processed = uiState.processedImage?.asImageBitmap()
+        val original = uiState.originalImage?.takeIf { !it.isRecycled }?.asImageBitmap()
+        val processed = uiState.processedImage?.takeIf { !it.isRecycled }?.asImageBitmap()
         
         if (processed == null && original == null) return@Canvas
         

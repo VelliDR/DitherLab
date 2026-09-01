@@ -18,6 +18,12 @@ interface GpuShaderEngine : VisualEngine {
     fun createShader(config: EffectConfig): RuntimeShader
 
     /**
+     * Updates the uniforms on an existing shader dynamically to avoid recompilation.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    fun updateShaderUniforms(shader: RuntimeShader, config: EffectConfig)
+
+    /**
      * Applies the shader to the input bitmap and returns the processed bitmap.
      * On Android 13+, this uses Skia's highly optimized RuntimeShader implementation.
      */

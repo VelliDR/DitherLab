@@ -5,8 +5,13 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
 
 object MaskManager {
     /**
@@ -104,48 +109,279 @@ object MaskManager {
             style = Paint.Style.FILL
         }
 
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val path = Path()
+
         when (shape.lowercase()) {
-            "circle" -> {
-                val cx = width / 2f
-                val cy = height / 2f
-                val radius = Math.min(cx, cy)
-                canvas.drawCircle(cx, cy, radius, paint)
+            "fluidriver" -> {
+                path.moveTo(w * 0.38f, 0f)
+                path.cubicTo(w * 0.41f, h * 0.31f, w * 0.8f, h * 0.47f, w, h * 0.6f)
+                path.lineTo(w, h)
+                path.lineTo(w * 0.66f, h)
+                path.cubicTo(w * 0.63f, h * 0.72f, w * 0.25f, h * 0.55f, 0f, h * 0.35f)
+                path.lineTo(0f, 0f)
+                path.close()
             }
-            "heart" -> {
-                // Heart shape using path
-                val path = android.graphics.Path()
-                val w = width.toFloat()
-                val h = height.toFloat()
-                path.moveTo(w / 2, h / 4)
-                path.cubicTo(w * 5/8, 0f, w, h / 8, w / 2, h * 3/4)
-                path.moveTo(w / 2, h / 4)
-                path.cubicTo(w * 3/8, 0f, 0f, h / 8, w / 2, h * 3/4)
-                canvas.drawPath(path, paint)
-            }
-            "star" -> {
-                val path = android.graphics.Path()
-                val cx = width / 2f
-                val cy = height / 2f
-                val outerRadius = Math.min(cx, cy)
-                val innerRadius = outerRadius * 0.4f
-                val points = 5
-                var angle = -Math.PI / 2.0
-                val angleIncrement = Math.PI / points
+            "fluidcorners" -> {
+                path.moveTo(w * 0.38f, 0f)
+                path.cubicTo(w * 0.41f, h * 0.31f, w * 0.8f, h * 0.47f, w, h * 0.6f)
+                path.lineTo(w, 0f)
+                path.close()
                 
-                path.moveTo(cx + (outerRadius * Math.cos(angle)).toFloat(), cy + (outerRadius * Math.sin(angle)).toFloat())
-                for (i in 0 until points * 2) {
-                    angle += angleIncrement
-                    val r = if (i % 2 == 0) innerRadius else outerRadius
-                    path.lineTo(cx + (r * Math.cos(angle)).toFloat(), cy + (r * Math.sin(angle)).toFloat())
+                path.moveTo(0f, h * 0.35f)
+                path.cubicTo(w * 0.25f, h * 0.55f, w * 0.63f, h * 0.72f, w * 0.66f, h)
+                path.lineTo(0f, h)
+                path.close()
+            }
+            "blob" -> {
+                path.moveTo(w * 0.5f, h * 0.08f)
+                path.cubicTo(w * 0.83f, h * 0.06f, w * 0.97f, h * 0.29f, w * 0.91f, h * 0.55f)
+                path.cubicTo(w * 0.86f, h * 0.82f, w * 0.69f, h * 0.94f, w * 0.44f, h * 0.92f)
+                path.cubicTo(w * 0.13f, h * 0.9f, w * 0.05f, h * 0.74f, w * 0.08f, h * 0.49f)
+                path.cubicTo(w * 0.11f, h * 0.19f, w * 0.22f, h * 0.09f, w * 0.5f, h * 0.08f)
+                path.close()
+            }
+            "wavetop" -> {
+                path.moveTo(0f, h * 0.23f)
+                path.cubicTo(w * 0.25f, h * 0.11f, w * 0.5f, h * 0.35f, w * 0.75f, h * 0.19f)
+                path.cubicTo(w * 0.87f, h * 0.11f, w * 0.94f, h * 0.15f, w, h * 0.21f)
+                path.lineTo(w, h)
+                path.lineTo(0f, h)
+                path.close()
+            }
+            "arch" -> {
+                val pad = w * 0.08f
+                path.moveTo(pad, h - pad)
+                path.lineTo(pad, h * 0.35f)
+                path.cubicTo(pad, pad * 0.5f, w - pad, pad * 0.5f, w - pad, h * 0.35f)
+                path.lineTo(w - pad, h - pad)
+                path.close()
+            }
+            "doublearch" -> {
+                val padX = w * 0.05f
+                val padY = h * 0.04f
+                val archW = (w - (padX * 3)) / 2f
+                
+                path.moveTo(padX, h - padY)
+                path.lineTo(padX, h * 0.3f)
+                path.cubicTo(padX, h * 0.1f, padX + archW, h * 0.1f, padX + archW, h * 0.3f)
+                path.lineTo(padX + archW, h - padY)
+                path.close()
+                
+                val rightX = padX * 2 + archW
+                path.moveTo(rightX, h - padY)
+                path.lineTo(rightX, h * 0.3f)
+                path.cubicTo(rightX, h * 0.1f, rightX + archW, h * 0.1f, rightX + archW, h * 0.3f)
+                path.lineTo(rightX + archW, h - padY)
+                path.close()
+            }
+            "cinemaframe" -> {
+                val x = w * 0.07f
+                val y = h * 0.06f
+                val fw = w * 0.86f
+                val fh = h * 0.88f
+                val r = min(w, h) * 0.1f
+                path.addRoundRect(RectF(x, y, x + fw, y + fh), r, r, Path.Direction.CW)
+            }
+            "ticket" -> {
+                val x = w * 0.05f
+                val y = h * 0.08f
+                val fw = w * 0.9f
+                val fh = h * 0.84f
+                val r = min(w, h) * 0.08f
+                path.moveTo(x, y)
+                path.lineTo(x + fw, y)
+                path.lineTo(x + fw, y + fh / 2 - r)
+                path.arcTo(RectF(x + fw - r, y + fh / 2 - r, x + fw + r, y + fh / 2 + r), 270f, -180f)
+                path.lineTo(x + fw, y + fh)
+                path.lineTo(x, y + fh)
+                path.lineTo(x, y + fh / 2 + r)
+                path.arcTo(RectF(x - r, y + fh / 2 - r, x + r, y + fh / 2 + r), 90f, -180f)
+                path.close()
+            }
+            "torn1" -> {
+                path.moveTo(w * 0.07f, h * 0.04f)
+                path.lineTo(w * 0.93f, h * 0.03f)
+                path.quadTo(w * 0.88f, h * 0.5f, w * 0.95f, h * 0.96f)
+                path.lineTo(w * 0.04f, h * 0.97f)
+                path.quadTo(w * 0.11f, h * 0.5f, w * 0.07f, h * 0.04f)
+                path.close()
+            }
+            "torn2" -> {
+                val pad = w * 0.05f
+                path.moveTo(pad, h * 0.06f)
+                path.lineTo(w - pad, h * 0.06f)
+                path.lineTo(w - pad, h * 0.82f)
+                
+                val teethCount = 15
+                val step = (w - pad * 2) / teethCount
+                var i = w - pad
+                while (i > pad) {
+                    val rnd = if (Math.round(i).toInt() % 3 == 0) h * 0.05f else -h * 0.02f
+                    path.lineTo(i - step / 2, h * 0.82f + rnd)
+                    i -= step
+                }
+                path.lineTo(pad, h * 0.82f)
+                path.close()
+            }
+            "tornwindow" -> {
+                val padX = w * 0.1f
+                val padY = h * 0.12f
+                path.moveTo(padX, padY)
+                
+                val stepX = (w - padX * 2) / 10
+                var i = padX
+                while (i < w - padX) {
+                    val rnd = if (Math.round(i).toInt() % 3 == 0) h * 0.02f else -h * 0.015f
+                    path.lineTo(i + stepX / 2, padY + rnd)
+                    i += stepX
+                }
+                path.lineTo(w - padX, h - padY)
+                
+                i = w - padX
+                while (i > padX) {
+                    val rnd = if (Math.round(i).toInt() % 3 == 0) -h * 0.02f else h * 0.015f
+                    path.lineTo(i - stepX / 2, h - padY + rnd)
+                    i -= stepX
+                }
+                path.lineTo(padX, padY)
+                path.close()
+            }
+            "stamp" -> {
+                val px = w * 0.05f
+                val py = h * 0.05f
+                val pw = w * 0.9f
+                val ph = h * 0.9f
+                val r = min(w, h) * 0.015f
+                val stepsX = (pw / (r * 4)).toInt()
+                val stepW = pw / stepsX
+                val stepsY = (ph / (r * 4)).toInt()
+                val stepH = ph / stepsY
+
+                path.moveTo(px, py)
+                for (i in 0 until stepsX) {
+                    path.lineTo(px + i * stepW + stepW / 2 - r, py)
+                    path.arcTo(RectF(px + i * stepW + stepW / 2 - r, py - r, px + i * stepW + stepW / 2 + r, py + r), 180f, -180f)
+                    path.lineTo(px + (i + 1) * stepW, py)
+                }
+                for (i in 0 until stepsY) {
+                    path.lineTo(px + pw, py + i * stepH + stepH / 2 - r)
+                    path.arcTo(RectF(px + pw - r, py + i * stepH + stepH / 2 - r, px + pw + r, py + i * stepH + stepH / 2 + r), 270f, -180f)
+                    path.lineTo(px + pw, py + (i + 1) * stepH)
+                }
+                for (i in stepsX downTo 1) {
+                    path.lineTo(px + i * stepW - stepW / 2 + r, py + ph)
+                    path.arcTo(RectF(px + i * stepW - stepW / 2 - r, py + ph - r, px + i * stepW - stepW / 2 + r, py + ph + r), 0f, -180f)
+                    path.lineTo(px + (i - 1) * stepW, py + ph)
+                }
+                for (i in stepsY downTo 1) {
+                    path.lineTo(px, py + i * stepH - stepH / 2 + r)
+                    path.arcTo(RectF(px - r, py + i * stepH - stepH / 2 - r, px + r, py + i * stepH - stepH / 2 + r), 90f, -180f)
+                    path.lineTo(px, py + (i - 1) * stepH)
                 }
                 path.close()
-                canvas.drawPath(path, paint)
+            }
+            "puzzle" -> {
+                val x = w * 0.1f
+                val y = h * 0.1f
+                val pw = w * 0.8f
+                val ph = h * 0.8f
+                val knob = min(w, h) * 0.08f
+                
+                path.moveTo(x, y)
+                path.lineTo(x + pw / 2 - knob, y)
+                path.cubicTo(x + pw / 2 - knob, y - knob * 2, x + pw / 2 + knob, y - knob * 2, x + pw / 2 + knob, y)
+                path.lineTo(x + pw, y)
+                path.lineTo(x + pw, y + ph / 2 - knob)
+                path.cubicTo(x + pw - knob * 2, y + ph / 2 - knob, x + pw - knob * 2, y + ph / 2 + knob, x + pw, y + ph / 2 + knob)
+                path.lineTo(x + pw, y + ph)
+                path.lineTo(x + pw / 2 + knob, y + ph)
+                path.cubicTo(x + pw / 2 + knob, y + ph - knob * 2, x + pw / 2 - knob, y + ph - knob * 2, x + pw / 2 - knob, y + ph)
+                path.lineTo(x, y + ph)
+                path.lineTo(x, y + ph / 2 + knob)
+                path.cubicTo(x + knob * 2, y + ph / 2 + knob, x + knob * 2, y + ph / 2 - knob, x, y + ph / 2 - knob)
+                path.close()
+            }
+            "diagonal" -> {
+                path.moveTo(w * 0.1f, h * 0.04f)
+                path.lineTo(w * 0.94f, h * 0.15f)
+                path.lineTo(w * 0.88f, h * 0.96f)
+                path.lineTo(w * 0.05f, h * 0.84f)
+                path.close()
+            }
+            "diagonalsplit" -> {
+                path.moveTo(0f, h * 0.15f)
+                path.lineTo(w, 0f)
+                path.lineTo(w, h * 0.82f)
+                path.lineTo(0f, h * 0.98f)
+                path.close()
+            }
+            "hexagon" -> {
+                path.moveTo(w * 0.5f, h * 0.05f)
+                path.lineTo(w * 0.93f, h * 0.25f)
+                path.lineTo(w * 0.93f, h * 0.75f)
+                path.lineTo(w * 0.5f, h * 0.95f)
+                path.lineTo(w * 0.07f, h * 0.75f)
+                path.lineTo(w * 0.07f, h * 0.25f)
+                path.close()
+            }
+            "diamond" -> {
+                path.moveTo(w * 0.5f, h * 0.03f)
+                path.lineTo(w * 0.95f, h * 0.5f)
+                path.lineTo(w * 0.5f, h * 0.97f)
+                path.lineTo(w * 0.05f, h * 0.5f)
+                path.close()
+            }
+            "badge" -> {
+                val cx = w / 2f
+                val cy = h / 2f
+                val minD = min(w, h)
+                val rOuter = minD * 0.45f
+                val rInner = minD * 0.38f
+                val points = 16
+                for (i in 0 until points * 2) {
+                    val r = if (i % 2 == 0) rOuter else rInner
+                    val a = (i * Math.PI) / points
+                    if (i == 0) {
+                        path.moveTo((cx + r * Math.sin(a)).toFloat(), (cy - r * Math.cos(a)).toFloat())
+                    } else {
+                        path.lineTo((cx + r * Math.sin(a)).toFloat(), (cy - r * Math.cos(a)).toFloat())
+                    }
+                }
+                path.close()
+            }
+            "circle" -> {
+                val cx = w / 2f
+                val cy = h / 2f
+                val r = min(w, h) * 0.45f
+                path.addCircle(cx, cy, r, Path.Direction.CW)
+            }
+            "ellipse" -> {
+                val cx = w / 2f
+                val cy = h / 2f
+                val rx = w * 0.4f
+                val ry = h * 0.43f
+                path.addOval(RectF(cx - rx, cy - ry, cx + rx, cy + ry), Path.Direction.CW)
+            }
+            "windowgrid" -> {
+                val gap = w * 0.03f
+                val padX = w * 0.07f
+                val padY = h * 0.05f
+                val rw = (w - padX * 2f - gap) / 2f
+                val rh = (h - padY * 2f - gap) / 2f
+                path.addRect(RectF(padX, padY, padX + rw, padY + rh), Path.Direction.CW)
+                path.addRect(RectF(padX + rw + gap, padY, padX + rw + gap + rw, padY + rh), Path.Direction.CW)
+                path.addRect(RectF(padX, padY + rh + gap, padX + rw, padY + rh + gap + rh), Path.Direction.CW)
+                path.addRect(RectF(padX + rw + gap, padY + rh + gap, padX + rw + gap + rw, padY + rh + gap + rh), Path.Direction.CW)
             }
             else -> {
                 // "none" or unknown: solid white mask (no masking)
-                canvas.drawColor(android.graphics.Color.WHITE)
+                path.addRect(RectF(0f, 0f, w, h), Path.Direction.CW)
             }
         }
+        
+        canvas.drawPath(path, paint)
         return@withContext output
     }
 }

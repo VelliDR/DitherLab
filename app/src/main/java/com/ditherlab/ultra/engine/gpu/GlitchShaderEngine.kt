@@ -73,9 +73,16 @@ class GlitchShaderEngine : GpuShaderEngine {
         """.trimIndent()
 
         val shader = RuntimeShader(agslCode)
-        shader.setFloatUniform("intensity", config.glitchIntensity)
+        shader.setFloatUniform("intensity", config.glitchIntensity / 100f)
         shader.setFloatUniform("tiltX", config.tiltX)
         shader.setFloatUniform("tiltY", config.tiltY)
         return shader
+    }
+    
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    override fun updateShaderUniforms(shader: RuntimeShader, config: EffectConfig) {
+        shader.setFloatUniform("intensity", config.glitchIntensity / 100f)
+        shader.setFloatUniform("tiltX", config.tiltX)
+        shader.setFloatUniform("tiltY", config.tiltY)
     }
 }
