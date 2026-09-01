@@ -1,4 +1,9 @@
 package com.ditherlab.ultra.ui.screens
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.alpha
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.AnimatedVisibility
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -95,6 +100,8 @@ fun StudioScreen(
         }
     }
 
+    var isDrawerOpen by remember { mutableStateOf(false) }
+
     Scaffold(
         containerColor = DeepCanvasBlack,
         topBar = {
@@ -106,7 +113,7 @@ fun StudioScreen(
                             shape = RoundedCornerShape(4.dp),
                             modifier = Modifier.padding(end = 8.dp)
                         ) {
-                            Text("v2.08", color = DeepCanvasBlack, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            Text("v3.00", color = DeepCanvasBlack, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                         }
                         Column {
                             Text("Koca Bir Saçmalık", color = PrimaryLightSage, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
@@ -126,6 +133,9 @@ fun StudioScreen(
                         }
                         TextButton(onClick = { pickVideo.launch("video/*") }) {
                             Text("VİDEO", color = PrimaryMatteGreen)
+                        }
+                        IconButton(onClick = { isDrawerOpen = !isDrawerOpen }) {
+                            Text("🎨", fontSize = 20.sp)
                         }
                         if (activeState.isExporting || activeState.isProcessingVideo) {
                             CircularProgressIndicator(
@@ -161,7 +171,9 @@ fun StudioScreen(
                     Text(text = "Error: ${state.message}", color = Color.Red, modifier = Modifier.align(Alignment.Center))
                 }
                 is StudioUiState.Active -> {
-                    Column(Modifier.fillMaxSize()) {
+                    Box(Modifier.fillMaxSize()) {
+                        val controlsAlpha by animateFloatAsState(targetValue = if (state.sliderIsDragging) 0.1f else 1f, label = "alpha")
+                        Column(Modifier.fillMaxSize()) {
                         
                         // Üst kısım: Viewport Önizleme (Esnek Yükseklik)
                         Box(
@@ -205,7 +217,7 @@ fun StudioScreen(
                                 )
                             } else if (state.originalVideoUri != null) {
                                 // ExoPlayer for real-time preview
-                                val engine = viewModel.availableEngines.getOrNull(state.selectedEngineIndex) ?: viewModel.availableEngines.first()
+                                val engine = viewModel.availableEngines.getOrNull(state.backgroundEngineIndex) ?: viewModel.availableEngines.first()
                                 val isGpuEngine = engine is com.ditherlab.ultra.engine.gpu.GpuShaderEngine
                                 
                                 val exoPlayer = remember(context) {
@@ -276,6 +288,7 @@ fun StudioScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f) // Limit height so it doesn't squish the canvas
+                                    .alpha(controlsAlpha)
                                     .simpleVerticalScrollbar(scrollState, color = PrimaryMatteGreen.copy(alpha = 0.5f))
                                     .verticalScroll(scrollState)
                                     .padding(horizontal = 16.dp)
@@ -296,10 +309,10 @@ fun StudioScreen(
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     viewModel.availableEngines.forEachIndexed { index, engine ->
-                                        val isSelected = state.selectedEngineIndex == index
+                                        val isSelected = state.backgroundEngineIndex == index
                                         Surface(
                                             modifier = Modifier
-                                                .clickable { viewModel.setEngine(index) },
+                                                .clickable { viewModel.setBackgroundEngine(index) },
                                             color = if (isSelected) PrimaryMatteGreen.copy(alpha = 0.15f) else SurfaceDark,
                                             border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) PrimaryMatteGreen else SurfaceVariantDark),
                                             shape = RoundedCornerShape(8.dp)
@@ -392,7 +405,7 @@ fun StudioScreen(
                                         }
 
                                         // Dinamik Ayarlar
-                                        when (state.selectedEngineIndex) {
+                                        when (state.backgroundEngineIndex) {
                                             0 -> { // PixelArt
                                                 val palettes = listOf(
                                                     "gameboy" to "Gameboy",
@@ -424,15 +437,13 @@ fun StudioScreen(
                                                     }
                                                 }
                                                 Text("Piksel Boyutu: ${state.currentConfig.pixelSize.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.pixelSize - 32f) / (256f - 32f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.pixelSize - 32f) / (256f - 32f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(pixelSize = 32f + v * (256f - 32f)) } }
                                                 )
                                             }
                                             1 -> { // Glitch
                                                 Text("Glitch Yoğunluğu: ${state.currentConfig.glitchIntensity.toInt()}%", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.glitchIntensity - 5f) / (100f - 5f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.glitchIntensity - 5f) / (100f - 5f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(glitchIntensity = 5f + v * (100f - 5f)) } }
                                                 )
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -464,18 +475,15 @@ fun StudioScreen(
                                                 }
                                                 Spacer(Modifier.height(8.dp))
                                                 Text("Yoğunluk: ${state.currentConfig.vangoghStepSize.toInt()}", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.vangoghStepSize - 6f) / (24f - 6f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.vangoghStepSize - 6f) / (24f - 6f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(vangoghStepSize = 6f + v * (24f - 6f)) } }
                                                 )
                                                 Text("Min Fırça: ${state.currentConfig.vangoghMinLength.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.vangoghMinLength - 5f) / (20f - 5f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.vangoghMinLength - 5f) / (20f - 5f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(vangoghMinLength = 5f + v * (20f - 5f)) } }
                                                 )
                                                 Text("Max Fırça: ${state.currentConfig.vangoghMaxLength.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.vangoghMaxLength - 15f) / (50f - 15f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.vangoghMaxLength - 15f) / (50f - 15f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(vangoghMaxLength = 15f + v * (50f - 15f)) } }
                                                 )
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -489,8 +497,7 @@ fun StudioScreen(
                                             }
                                             3 -> { // Minecraft
                                                 Text("Blok Boyutu: ${state.currentConfig.minecraftBlockSize.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.minecraftBlockSize - 8f) / (48f - 8f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.minecraftBlockSize - 8f) / (48f - 8f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(minecraftBlockSize = 8f + v * (48f - 8f)) } }
                                                 )
                                             }
@@ -514,8 +521,7 @@ fun StudioScreen(
                                                 }
                                                 Spacer(Modifier.height(8.dp))
                                                 Text("Pul Kenarı: ${state.currentConfig.postcardStampMargin.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.postcardStampMargin - 12f) / (60f - 12f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.postcardStampMargin - 12f) / (60f - 12f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(postcardStampMargin = 12f + v * (60f - 12f)) } }
                                                 )
                                             }
@@ -535,8 +541,7 @@ fun StudioScreen(
                                                 }
                                                 Spacer(Modifier.height(8.dp))
                                                 Text("Aşınma (Wear): ${state.currentConfig.thermalWear.toInt()}%", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = state.currentConfig.thermalWear / 100f,
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = state.currentConfig.thermalWear / 100f,
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(thermalWear = v * 100f) } }
                                                 )
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -589,15 +594,13 @@ fun StudioScreen(
                                                     }
                                                 }
                                                 Text("Yazı Tipi Boyutu: ${state.currentConfig.asciiFontSize.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.asciiFontSize - 6f) / (32f - 6f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.asciiFontSize - 6f) / (32f - 6f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(asciiFontSize = 6f + v * (32f - 6f)) } }
                                                 )
                                             }
                                             7 -> { // CrtTv
                                                 Text("Tarama Çizgisi Boşluğu: ${state.currentConfig.crtScanlineGap.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.crtScanlineGap - 1f) / (10f - 1f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.crtScanlineGap - 1f) / (10f - 1f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(crtScanlineGap = 1f + v * (10f - 1f)) } }
                                                 )
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -641,51 +644,43 @@ fun StudioScreen(
                                                 }
                                                 Spacer(Modifier.height(8.dp))
                                                 Text("Fırça Boyutu: ${state.currentConfig.vangoghBetaBrushSize.toInt()}", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.vangoghBetaBrushSize - 2f) / (50f - 2f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.vangoghBetaBrushSize - 2f) / (50f - 2f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(vangoghBetaBrushSize = 2f + v * (50f - 2f)) } }
                                                 )
                                                 Text("Yoğunluk: ${(state.currentConfig.vangoghBetaIntensity * 100).toInt()}%", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.vangoghBetaIntensity - 0.1f) / (1f - 0.1f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.vangoghBetaIntensity - 0.1f) / (1f - 0.1f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(vangoghBetaIntensity = 0.1f + v * (1f - 0.1f)) } }
                                                 )
                                             }
                                             10 -> { // CmykOffset
                                                 Text("Kayma (Offset): ${state.currentConfig.cmykOffsetPx.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.cmykOffsetPx - 0f) / (20f - 0f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.cmykOffsetPx - 0f) / (20f - 0f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(cmykOffsetPx = v * 20f) } }
                                                 )
                                                 Text("Nokta Boyutu: ${state.currentConfig.cmykDotSize.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.cmykDotSize - 3f) / (32f - 3f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.cmykDotSize - 3f) / (32f - 3f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(cmykDotSize = 3f + v * (32f - 3f)) } }
                                                 )
                                             }
                                             11 -> { // PunkFanzine
                                                 Text("Kontrast Artışı: ${state.currentConfig.punkContrastBoost}", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.punkContrastBoost - 1f) / (5f - 1f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.punkContrastBoost - 1f) / (5f - 1f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(punkContrastBoost = 1f + v * (5f - 1f)) } }
                                                 )
                                                 Text("Toner Gürültüsü: ${state.currentConfig.punkTonerNoise.toInt()}", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.punkTonerNoise - 0f) / (100f - 0f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.punkTonerNoise - 0f) / (100f - 0f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(punkTonerNoise = v * 100f) } }
                                                 )
                                             }
                                             12 -> { // ColorClash
                                                 Text("Blok Boyutu: ${state.currentConfig.colorClashBlockSize.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.colorClashBlockSize - 4f) / (64f - 4f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.colorClashBlockSize - 4f) / (64f - 4f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(colorClashBlockSize = 4f + v * (64f - 4f)) } }
                                                 )
                                             }
                                             13 -> { // TextGlitch
                                                 Text("Yazı Boyutu: ${state.currentConfig.textGlitchFontSize.toInt()}px", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = (state.currentConfig.textGlitchFontSize - 8f) / (120f - 8f),
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = (state.currentConfig.textGlitchFontSize - 8f) / (120f - 8f),
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(textGlitchFontSize = 8f + v * (120f - 8f)) } }
                                                 )
                                                 Text("Glitch Stili", color = Color.White, fontSize = 12.sp)
@@ -711,13 +706,11 @@ fun StudioScreen(
                                                     }
                                                 }
                                                 Text("Gürültü Yoğunluğu: ${(state.currentConfig.sensorNoiseIntensity*100).toInt()}%", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = state.currentConfig.sensorNoiseIntensity,
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = state.currentConfig.sensorNoiseIntensity,
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(sensorNoiseIntensity = v) } }
                                                 )
                                                 Text("Kaos Seviyesi: ${(state.currentConfig.sensorChaosLevel*100).toInt()}%", color = Color.White, fontSize = 12.sp)
-                                                MatteSlider(
-                                                    value = state.currentConfig.sensorChaosLevel,
+                                                MatteSlider(onDraggingChanged = { viewModel.setSliderDragging(it) }, value = state.currentConfig.sensorChaosLevel,
                                                     onValueChange = { v -> viewModel.updateConfig { it.copy(sensorChaosLevel = v) } }
                                                 )
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -757,9 +750,105 @@ fun StudioScreen(
                                 }
                             }
                         }
+                        }
+                        // Right Drawer Overlay
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
+                            AnimatedVisibility(
+                               visible = isDrawerOpen,
+                               enter = slideInHorizontally(initialOffsetX = { it }),
+                               exit = slideOutHorizontally(targetOffsetX = { it })
+                            ) {
+                             Box(
+                                 modifier = Modifier
+                                     .fillMaxHeight()
+                                     .width(280.dp)
+                                     .alpha(controlsAlpha)
+                                     .background(DeepCanvasBlack.copy(alpha=0.95f))
+                                     .padding(16.dp)
+                             ) {
+                                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                     Text("LABORATUVAR SEÇENEKLERİ", color = PrimaryMatteGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                     Spacer(modifier = Modifier.height(16.dp))
+                                     
+                                     Text("Arkaplan Efekti", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                                     FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                         viewModel.availableEngines.forEachIndexed { index, engine ->
+                                             val isSelected = state.backgroundEngineIndex == index
+                                             Surface(
+                                                 modifier = Modifier.clickable { viewModel.setBackgroundEngine(index) },
+                                                 color = if (isSelected) PrimaryMatteGreen.copy(alpha = 0.2f) else SurfaceDark,
+                                                 border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) PrimaryMatteGreen else SurfaceVariantDark),
+                                                 shape = RoundedCornerShape(4.dp)
+                                             ) {
+                                                 Text(engine.engineName, color = if (isSelected) PrimaryMatteGreen else Color.LightGray, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                             }
+                                         }
+                                     }
+                                     
+                                     Spacer(modifier = Modifier.height(16.dp))
+                                     
+                                     Text("Özne / Ön Katman Efekti", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                                     FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                         viewModel.availableEngines.forEachIndexed { index, engine ->
+                                             val isSelected = state.foregroundEngineIndex == index
+                                             Surface(
+                                                 modifier = Modifier.clickable { viewModel.setForegroundEngine(index) },
+                                                 color = if (isSelected) PrimaryMatteGreen.copy(alpha = 0.2f) else SurfaceDark,
+                                                 border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) PrimaryMatteGreen else SurfaceVariantDark),
+                                                 shape = RoundedCornerShape(4.dp)
+                                             ) {
+                                                 Text(engine.engineName, color = if (isSelected) PrimaryMatteGreen else Color.LightGray, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                             }
+                                         }
+                                     }
+                                     
+                                     Spacer(modifier = Modifier.height(16.dp))
+                                     
+                                     Text("Maske Şekli (Özel)", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                                     val shapes = listOf("none" to "Yok", "circle" to "Daire", "heart" to "Kalp", "star" to "Yıldız")
+                                     FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                         shapes.forEach { (key, label) ->
+                                             val isSelected = state.maskShape == key
+                                             Surface(
+                                                 modifier = Modifier.clickable { viewModel.setMaskShape(key) },
+                                                 color = if (isSelected) PrimaryMatteGreen.copy(alpha = 0.2f) else SurfaceDark,
+                                                 border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) PrimaryMatteGreen else SurfaceVariantDark),
+                                                 shape = RoundedCornerShape(4.dp)
+                                             ) {
+                                                 Text(label, color = if (isSelected) PrimaryMatteGreen else Color.LightGray, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                             }
+                                         }
+                                     }
+                                     
+                                     Spacer(modifier = Modifier.height(16.dp))
+                                     Row(verticalAlignment = Alignment.CenterVertically) {
+                                         androidx.compose.material3.Checkbox(
+                                             checked = state.currentConfig.maskIsTransparent,
+                                             onCheckedChange = { v -> viewModel.updateConfig { it.copy(maskIsTransparent = v) } },
+                                             colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = PrimaryMatteGreen)
+                                         )
+                                         Text("Şekil İçi Şeffaf Olsun", color = Color.White, fontSize = 12.sp)
+                                     }
+                                     
+                                     Spacer(modifier = Modifier.height(24.dp))
+                                     Button(
+                                         onClick = { isDrawerOpen = false },
+                                         modifier = Modifier.fillMaxWidth(),
+                                         colors = ButtonDefaults.buttonColors(containerColor = SurfaceDark),
+                                         border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryMatteGreen)
+                                     ) {
+                                         Text("Kapat", color = PrimaryMatteGreen, fontSize = 12.sp)
+                                     }
+                                 }
+                             }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+}
+
+
