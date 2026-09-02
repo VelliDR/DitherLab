@@ -1,11 +1,11 @@
-# 🎨 DitherLab Ultra v3.1
+# 🎨 DitherLab v3.1
 
 ![DitherLab Ultra](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android)
 ![Kotlin](https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin)
 ![ML Kit](https://img.shields.io/badge/AI-Google_ML_Kit-4285F4?style=for-the-badge&logo=google)
 ![License](https://img.shields.io/badge/License-GPL_3.0-blue?style=for-the-badge)
 
-**DitherLab Ultra**, orijinal DitherLab PWA ve Karanlık Oda projelerinden ilham alınarak geliştirilmiş; nostaljik, retro, gazete ve siberpunk görsel estetiğini modern Android cihazların gücüyle buluşturan **yüksek performanslı bir fotoğraf ve VİDEO düzenleme** uygulamasıdır.
+**DitherLab**, orijinal Retro-anomalies PWA ve Karanlık Oda PWA projelerinden ilham alınarak geliştirilmiş; nostaljik, retro, gazete ve siberpunk görsel estetiğini modern Android cihazların gücüyle buluşturan **yüksek performanslı bir fotoğraf ve VİDEO düzenleme** uygulamasıdır.
 
 Tüm sihir tamamen **cihazınızda (on-device offline)** gerçekleşir. İnternete veya buluta ihtiyaç duymadan, çok çekirdekli asenkron (multi-core concurrency) mimarisiyle saniyeler içinde büyüleyici sonuçlar alırsınız! 🚀
 
@@ -13,7 +13,7 @@ Tüm sihir tamamen **cihazınızda (on-device offline)** gerçekleşir. İnterne
 
 ## 🌟 v3.1 - Spider-Noir, Video Timeline & Ultra Performans Güncellemesi
 
-V3.1 güncellemesiyle DitherLab Ultra, profesyonel video kırpma araçları ve gelişmiş Spider-Verse estetiği ile yenilendi!
+V3.1 güncellemesiyle DitherLab, profesyonel video kırpma araçları ve gelişmiş Spider-Verse estetiği ile yenilendi!
 
 - 🕷️ **Spider-Noir & Renk Popu Motoru:** *Spider-Man Noir* estetiğinden esinlenilerek baştan tasarlanan Noir motoru!
   - 🎨 **Spider-Red Pop:** Görseldeki kırmızı vurguları canlı koruyarak geri kalan alanı yüksek kontrastlı gazete noktaları ve Noir siyah-beyaza dönüştürür.
