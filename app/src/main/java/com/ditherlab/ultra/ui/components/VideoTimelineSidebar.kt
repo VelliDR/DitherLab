@@ -86,15 +86,17 @@ fun VideoTimelineSidebar(state: StudioUiState.Active, viewModel: StudioViewModel
                     .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                state.videoThumbnails.forEach { bmp ->
+                state.videoThumbnails.forEachIndexed { index, bmp ->
                     if (!bmp.isRecycled) {
+                        val thumbTimeMs = (index * durationMs) / Math.max(1, state.videoThumbnails.size - 1)
                         Image(
                             bitmap = bmp.asImageBitmap(),
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(4.dp)),
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable { viewModel.seekVideoPreviewToMs(thumbTimeMs) },
                             contentScale = ContentScale.Crop
                         )
                     }

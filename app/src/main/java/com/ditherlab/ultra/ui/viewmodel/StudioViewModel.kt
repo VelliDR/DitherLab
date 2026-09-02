@@ -95,6 +95,7 @@ class StudioViewModel : ViewModel() {
         val currentState = _uiState.value as? StudioUiState.Active ?: return
         
         viewModelScope.launch(Dispatchers.IO) {
+            appContext = context.applicationContext
             var previewBitmap: Bitmap? = null
             var durationMs = 0L
             val thumbnails = mutableListOf<Bitmap>()
@@ -139,6 +140,60 @@ class StudioViewModel : ViewModel() {
                     // Arka planda ML Kit ile Özneyi Maskele
                     extractSubjectMask(previewBitmap)
                 }
+            }
+        }
+    }
+
+    private var appContext: android.content.Context? = null
+    private var videoPreviewJob: kotlinx.coroutines.Job? = null
+
+    fun seekVideoPreviewToMs(timeMs: Long) {
+        updateVideoPreviewFrame(timeMs)
+    }
+
+    fun updateVideoPreviewFrame(timeMs: Long) {
+        val ctx = appContext ?: return
+        val currentState = _uiState.value as? StudioUiState.Active ?: return
+        val videoUri = currentState.originalVideoUri ?: return
+        
+        videoPreviewJob?.cancel()
+        videoPreviewJob = viewModelScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(80) // Smooth debounce for slider gestures
+            try {
+                val retriever = android.media.MediaMetadataRetriever()
+                retriever.setDataSource(ctx, videoUri)
+                val timeUs = timeMs * 1000L
+                val frame = retriever.getFrameAtTime(timeUs, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                retriever.release()
+                
+                if (frame != null) {
+                    withContext(Dispatchers.Main) {
+                        val activeState = _uiState.value as? StudioUiState.Active ?: return@withContext
+                        _uiState.update { activeState.copy(originalImage = frame, subjectMaskBitmap = null) }
+                        applyEffects()
+                        extractSubjectMask(frame)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun updateConfig(update: (EffectConfig) -> EffectConfig) {
+        val currentState = _uiState.value as? StudioUiState.Active ?: return
+        val oldStartMs = currentState.currentConfig.effectStartTimeMs
+        val oldEndMs = currentState.currentConfig.effectEndTimeMs
+        val newConfig = update(currentState.currentConfig)
+        _uiState.update { currentState.copy(currentConfig = newConfig) }
+        applyEffects()
+        
+        // Dynamically update main canvas preview frame when start or end slider handle moves!
+        if (currentState.originalVideoUri != null) {
+            if (newConfig.effectStartTimeMs != oldStartMs) {
+                updateVideoPreviewFrame(newConfig.effectStartTimeMs)
+            } else if (newConfig.effectEndTimeMs != oldEndMs && newConfig.effectEndTimeMs > 0) {
+                updateVideoPreviewFrame(newConfig.effectEndTimeMs)
             }
         }
     }
@@ -204,13 +259,6 @@ class StudioViewModel : ViewModel() {
             .addOnCompleteListener {
                 segmenter.close()
             }
-    }
-
-    fun updateConfig(update: (EffectConfig) -> EffectConfig) {
-        val currentState = _uiState.value as? StudioUiState.Active ?: return
-        val newConfig = update(currentState.currentConfig)
-        _uiState.update { currentState.copy(currentConfig = newConfig) }
-        applyEffects()
     }
     
     fun updateTilt(tiltX: Float, tiltY: Float) {
