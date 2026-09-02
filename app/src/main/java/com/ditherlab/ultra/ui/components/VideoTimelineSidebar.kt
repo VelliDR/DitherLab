@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -22,15 +21,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ditherlab.ultra.data.model.StudioUiState
-import com.ditherlab.ultra.ui.theme.DeepCanvasBlack
-import com.ditherlab.ultra.ui.theme.MatteOrange
-import com.ditherlab.ultra.ui.theme.SurfaceDark
+import com.ditherlab.ultra.ui.theme.*
 import com.ditherlab.ultra.ui.viewmodel.StudioViewModel
 import kotlin.math.abs
+
+private enum class DragHandle { START, END }
 
 @Composable
 fun VideoTimelineSidebar(state: StudioUiState.Active, viewModel: StudioViewModel) {
@@ -43,16 +41,33 @@ fun VideoTimelineSidebar(state: StudioUiState.Active, viewModel: StudioViewModel
     val startFraction = (startMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
     val endFraction = (endMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
     
+    fun formatMs(ms: Long): String {
+        val totalSec = ms / 1000
+        val min = totalSec / 60
+        val sec = totalSec % 60
+        val tenths = (ms % 1000) / 100
+        return String.format("%02d:%02d.%d", min, sec, tenths)
+    }
+
     Column(
         modifier = Modifier
-            .width(100.dp)
+            .width(110.dp)
             .fillMaxHeight()
             .background(SurfaceDark)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("ZAMAN", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(8.dp))
+        Text("ZAMAN ÇİZELGESİ", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+        Spacer(Modifier.height(4.dp))
+        
+        Text(
+            text = "${formatMs(startMs)} - ${formatMs(endMs)}",
+            color = MatteOrange,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Medium
+        )
+        
+        Spacer(Modifier.height(6.dp))
         
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             // Scrollable Thumbnails
@@ -64,42 +79,64 @@ fun VideoTimelineSidebar(state: StudioUiState.Active, viewModel: StudioViewModel
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 state.videoThumbnails.forEach { bmp ->
-                    Image(
-                        bitmap = bmp.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(16f/9f)
-                            .clip(RoundedCornerShape(4.dp)),
-                        contentScale = ContentScale.Crop
-                    )
+                    if (!bmp.isRecycled) {
+                        Image(
+                            bitmap = bmp.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(4.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
             
             // Custom Vertical Range Slider Overlay
             var height by remember { mutableIntStateOf(0) }
+            var activeDragHandle by remember { mutableStateOf<DragHandle?>(null) }
             
             androidx.compose.foundation.Canvas(
                 modifier = Modifier
                     .fillMaxSize()
                     .onSizeChanged { height = it.height }
                     .pointerInput(Unit) {
-                        detectVerticalDragGestures { change, _ ->
-                            if (height == 0) return@detectVerticalDragGestures
-                            val y = change.position.y
-                            val fraction = (y / height).coerceIn(0f, 1f)
-                            
-                            val distToStart = abs(fraction - startFraction)
-                            val distToEnd = abs(fraction - endFraction)
-                            
-                            if (distToStart < distToEnd) {
-                                val newStart = fraction.coerceAtMost(endFraction - 0.05f)
-                                viewModel.updateConfig { it.copy(effectStartTimeMs = (newStart * durationMs).toLong()) }
-                            } else {
-                                val newEnd = fraction.coerceAtLeast(startFraction + 0.05f)
-                                viewModel.updateConfig { it.copy(effectEndTimeMs = (newEnd * durationMs).toLong()) }
+                        detectVerticalDragGestures(
+                            onDragStart = { down ->
+                                if (height == 0) return@detectVerticalDragGestures
+                                viewModel.setSliderDragging(true)
+                                val fraction = (down.y / height).coerceIn(0f, 1f)
+                                val distStart = abs(fraction - startFraction)
+                                val distEnd = abs(fraction - endFraction)
+                                activeDragHandle = if (distStart <= distEnd) DragHandle.START else DragHandle.END
+                            },
+                            onDragEnd = {
+                                viewModel.setSliderDragging(false)
+                                activeDragHandle = null
+                            },
+                            onDragCancel = {
+                                viewModel.setSliderDragging(false)
+                                activeDragHandle = null
+                            },
+                            onVerticalDrag = { change, _ ->
+                                if (height == 0 || activeDragHandle == null) return@detectVerticalDragGestures
+                                val y = change.position.y
+                                val fraction = (y / height).coerceIn(0f, 1f)
+                                
+                                when (activeDragHandle) {
+                                    DragHandle.START -> {
+                                        val newStart = fraction.coerceAtMost(endFraction - 0.05f)
+                                        viewModel.updateConfig { it.copy(effectStartTimeMs = (newStart * durationMs).toLong()) }
+                                    }
+                                    DragHandle.END -> {
+                                        val newEnd = fraction.coerceAtLeast(startFraction + 0.05f)
+                                        viewModel.updateConfig { it.copy(effectEndTimeMs = (newEnd * durationMs).toLong()) }
+                                    }
+                                    null -> {}
+                                }
                             }
-                        }
+                        )
                     }
             ) {
                 val w = size.width
@@ -108,19 +145,26 @@ fun VideoTimelineSidebar(state: StudioUiState.Active, viewModel: StudioViewModel
                 val startY = startFraction * h
                 val endY = endFraction * h
                 
-                // Dim unselected areas
+                // Dim unselected areas (top and bottom)
                 drawRect(
-                    color = Color.Black.copy(alpha = 0.6f),
+                    color = Color.Black.copy(alpha = 0.65f),
                     topLeft = Offset(0f, 0f),
                     size = Size(w, startY)
                 )
                 drawRect(
-                    color = Color.Black.copy(alpha = 0.6f),
+                    color = Color.Black.copy(alpha = 0.65f),
                     topLeft = Offset(0f, endY),
                     size = Size(w, h - endY)
                 )
                 
-                // Highlight borders
+                // Selected region outline
+                drawRect(
+                    color = MatteOrange.copy(alpha = 0.15f),
+                    topLeft = Offset(0f, startY),
+                    size = Size(w, maxOf(1f, endY - startY))
+                )
+                
+                // Highlight top and bottom handle bars
                 drawLine(
                     color = MatteOrange,
                     start = Offset(0f, startY),
@@ -134,40 +178,51 @@ fun VideoTimelineSidebar(state: StudioUiState.Active, viewModel: StudioViewModel
                     strokeWidth = 6f
                 )
                 
-                // Draw Thumbs
+                // Handle knobs
                 drawCircle(
-                    color = Color.White,
-                    radius = 16f,
-                    center = Offset(w / 2, startY)
+                    color = MatteOrange,
+                    radius = 18f,
+                    center = Offset(w / 2f, startY)
                 )
                 drawCircle(
                     color = Color.White,
-                    radius = 16f,
-                    center = Offset(w / 2, endY)
+                    radius = 12f,
+                    center = Offset(w / 2f, startY)
+                )
+                
+                drawCircle(
+                    color = MatteOrange,
+                    radius = 18f,
+                    center = Offset(w / 2f, endY)
+                )
+                drawCircle(
+                    color = Color.White,
+                    radius = 12f,
+                    center = Offset(w / 2f, endY)
                 )
             }
         }
         
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         
-        // Trim Toggle
+        // Trim Toggle Button
         val isTrimmed = state.currentConfig.trimVideoToEffect
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(6.dp))
                 .background(if (isTrimmed) MatteOrange else DeepCanvasBlack)
                 .clickable { viewModel.updateConfig { it.copy(trimVideoToEffect = !isTrimmed) } }
-                .padding(8.dp),
+                .padding(vertical = 6.dp, horizontal = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "SADECE KES",
+                text = if (isTrimmed) "KIRPILACAK" else "TAM VİDEO",
                 color = if (isTrimmed) DeepCanvasBlack else Color.White,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold
             )
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
     }
 }
