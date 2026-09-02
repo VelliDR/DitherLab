@@ -24,7 +24,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ditherlab.ultra.data.model.StudioUiState
-import com.ditherlab.ultra.ui.theme.*
+import com.ditherlab.ultra.ui.theme.DeepCanvasBlack
+import com.ditherlab.ultra.ui.theme.MatteOrange
+import com.ditherlab.ultra.ui.theme.SurfaceDark
 import com.ditherlab.ultra.ui.viewmodel.StudioViewModel
 import kotlin.math.abs
 
@@ -40,6 +42,12 @@ fun VideoTimelineSidebar(state: StudioUiState.Active, viewModel: StudioViewModel
     
     val startFraction = (startMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
     val endFraction = (endMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+
+    // Ensure gesture callbacks always read the latest state values without stale closure captures
+    val currentStartFraction by rememberUpdatedState(startFraction)
+    val currentEndFraction by rememberUpdatedState(endFraction)
+    val currentDurationMs by rememberUpdatedState(durationMs)
+    val currentViewModel by rememberUpdatedState(viewModel)
     
     fun formatMs(ms: Long): String {
         val totalSec = ms / 1000
@@ -105,33 +113,34 @@ fun VideoTimelineSidebar(state: StudioUiState.Active, viewModel: StudioViewModel
                         detectVerticalDragGestures(
                             onDragStart = { down ->
                                 if (height == 0) return@detectVerticalDragGestures
-                                viewModel.setSliderDragging(true)
+                                currentViewModel.setSliderDragging(true)
                                 val fraction = (down.y / height).coerceIn(0f, 1f)
-                                val distStart = abs(fraction - startFraction)
-                                val distEnd = abs(fraction - endFraction)
+                                val distStart = abs(fraction - currentStartFraction)
+                                val distEnd = abs(fraction - currentEndFraction)
                                 activeDragHandle = if (distStart <= distEnd) DragHandle.START else DragHandle.END
                             },
                             onDragEnd = {
-                                viewModel.setSliderDragging(false)
+                                currentViewModel.setSliderDragging(false)
                                 activeDragHandle = null
                             },
                             onDragCancel = {
-                                viewModel.setSliderDragging(false)
+                                currentViewModel.setSliderDragging(false)
                                 activeDragHandle = null
                             },
-                            onVerticalDrag = { change, _ ->
+                            onVerticalDrag = { change, dragAmount ->
                                 if (height == 0 || activeDragHandle == null) return@detectVerticalDragGestures
-                                val y = change.position.y
-                                val fraction = (y / height).coerceIn(0f, 1f)
+                                change.consume()
+                                val deltaFraction = dragAmount / height.toFloat()
+                                val minGapFraction = 500f / currentDurationMs.toFloat() // at least 500ms gap
                                 
                                 when (activeDragHandle) {
                                     DragHandle.START -> {
-                                        val newStart = fraction.coerceAtMost(endFraction - 0.05f)
-                                        viewModel.updateConfig { it.copy(effectStartTimeMs = (newStart * durationMs).toLong()) }
+                                        val newStart = (currentStartFraction + deltaFraction).coerceIn(0f, currentEndFraction - minGapFraction)
+                                        currentViewModel.updateConfig { it.copy(effectStartTimeMs = (newStart * currentDurationMs).toLong()) }
                                     }
                                     DragHandle.END -> {
-                                        val newEnd = fraction.coerceAtLeast(startFraction + 0.05f)
-                                        viewModel.updateConfig { it.copy(effectEndTimeMs = (newEnd * durationMs).toLong()) }
+                                        val newEnd = (currentEndFraction + deltaFraction).coerceIn(currentStartFraction + minGapFraction, 1f)
+                                        currentViewModel.updateConfig { it.copy(effectEndTimeMs = (newEnd * currentDurationMs).toLong()) }
                                     }
                                     null -> {}
                                 }
@@ -178,26 +187,31 @@ fun VideoTimelineSidebar(state: StudioUiState.Active, viewModel: StudioViewModel
                     strokeWidth = 6f
                 )
                 
-                // Handle knobs
+                // Top Handle Knob
+                val isStartActive = activeDragHandle == DragHandle.START
+                val startRadius = if (isStartActive) 22f else 18f
                 drawCircle(
-                    color = MatteOrange,
-                    radius = 18f,
+                    color = if (isStartActive) Color.White else MatteOrange,
+                    radius = startRadius,
                     center = Offset(w / 2f, startY)
                 )
                 drawCircle(
-                    color = Color.White,
-                    radius = 12f,
+                    color = if (isStartActive) MatteOrange else Color.White,
+                    radius = startRadius * 0.6f,
                     center = Offset(w / 2f, startY)
                 )
                 
+                // Bottom Handle Knob
+                val isEndActive = activeDragHandle == DragHandle.END
+                val endRadius = if (isEndActive) 22f else 18f
                 drawCircle(
-                    color = MatteOrange,
-                    radius = 18f,
+                    color = if (isEndActive) Color.White else MatteOrange,
+                    radius = endRadius,
                     center = Offset(w / 2f, endY)
                 )
                 drawCircle(
-                    color = Color.White,
-                    radius = 12f,
+                    color = if (isEndActive) MatteOrange else Color.White,
+                    radius = endRadius * 0.6f,
                     center = Offset(w / 2f, endY)
                 )
             }
